@@ -6,7 +6,7 @@ import AuthForm from "../components/AuthForm";
 import useFormFields from "../hooks/useFormFields";
 import { signup } from "../lib/api";
 
-export default function Signup() {
+export default function Signup({ onSignupSuccess }) {
   const navigate = useNavigate();
 
   const [values, handleChange] = useFormFields({
@@ -39,12 +39,17 @@ export default function Signup() {
     setError("");
 
     try {
-      await signup({
+      const response = await signup({
         email,
         password,
       });
 
-      navigate("/candidate-details");
+      if (!response.session?.accessToken) {
+        throw new Error("Account created, but sign in could not be completed.");
+      }
+
+      onSignupSuccess?.(response);
+      navigate(response.redirectTo || "/candidate-details", { replace: true });
     } catch (requestError) {
       setError(requestError.message);
     } finally {

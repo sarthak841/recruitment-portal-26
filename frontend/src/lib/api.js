@@ -53,6 +53,17 @@ export function saveCandidateDetails(payload, token) {
   });
 }
 
+export function getCandidates() {
+  return request("/api/admin/candidates");
+}
+
+export function updateCandidateStatus(id, status) {
+  return request(`/api/admin/candidates/${id}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
+}
+
 export async function getDashboard(signal) {
   const response = await fetch(`${apiBaseUrl}/dashboard`, { signal });
   const text = await response.text();
