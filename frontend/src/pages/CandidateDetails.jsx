@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "../App.css";
 import AuthPanel from "../components/AuthPanel";
 import FormField from "../components/FormField";
@@ -38,6 +39,15 @@ const attendanceOptions = [
   ["none", "None"],
 ].map(([value, label]) => ({ value, label }));
 
+const departmentOptions = [
+  ["", "Select a department"],
+  ["Tech", "Tech"],
+  ["Design", "Design"],
+  ["Marketing", "Marketing"],
+  ["Content", "Content"],
+  ["Media", "Media"],
+].map(([value, label]) => ({ value, label }));
+
 const topFields = [
   ["candidate-name", "name", "Name", "text", "Enter your full name"],
   ["candidate-email", "email", "Email", "email", "Enter email address"],
@@ -62,15 +72,13 @@ const departmentFields = [
     "primary-department",
     "primaryDepartment",
     "Your Primary Department",
-    "text",
-    "Enter primary department",
+    "department-select",
   ],
   [
     "secondary-department",
     "secondaryDepartment",
     "Your Secondary Department",
-    "text",
-    "Enter secondary department",
+    "department-select",
   ],
 ];
 
@@ -79,6 +87,7 @@ export default function CandidateDetails({
   onBackToSignup,
   onSaved,
 }) {
+  const navigate = useNavigate();
   const [values, handleChange, setValues] = useFormFields(initialDetails);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
@@ -104,10 +113,16 @@ export default function CandidateDetails({
       label={label}
       name={name}
       onChange={handleChange}
-      options={type === "select" ? attendanceOptions : undefined}
+      options={
+        type === "select"
+          ? attendanceOptions
+          : type === "department-select"
+            ? departmentOptions
+            : undefined
+      }
       placeholder={placeholder}
       required
-      type={type === "select" ? undefined : type}
+      type={type === "select" || type === "department-select" ? undefined : type}
       value={values[name]}
     />
   );
@@ -133,8 +148,14 @@ export default function CandidateDetails({
         token,
       );
 
-      setStatus(response.message || "Candidate details saved.");
+      const successMessage = "Your details have been saved successfully.";
+
+      setStatus(successMessage);
       onSaved?.(response);
+      navigate(response.redirectTo || "/dashboard", {
+        replace: true,
+        state: { successMessage },
+      });
     } catch (requestError) {
       setError(requestError.message);
     } finally {
@@ -194,7 +215,9 @@ export default function CandidateDetails({
           <button
             type="button"
             className="secondary-button"
-            onClick={onBackToSignup}
+            onClick={() =>
+              onBackToSignup ? onBackToSignup() : navigate("/signup")
+            }
           >
             Back to signup
           </button>

@@ -83,6 +83,8 @@ export async function saveCandidateDetails(req, res) {
     return res.status(status).json({ message: error });
   }
 
+  req.app.get("io")?.emit("candidate:submitted", data);
+
   return res.status(200).json({
     message: "Candidate details saved.",
     profile: data,

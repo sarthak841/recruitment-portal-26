@@ -75,6 +75,23 @@ export async function registerUser(email, password) {
 }
 
 export async function loginUser(email, password) {
+  const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+  const adminPassword = process.env.ADMIN_PASSWORD?.trim();
+
+  if (
+    adminEmail &&
+    adminPassword &&
+    email.toLowerCase() === adminEmail &&
+    password === adminPassword
+  ) {
+    return {
+      data: {
+        isAdmin: true,
+        redirectTo: "/admin-dashboard",
+      },
+    };
+  }
+
   const { data, error } = await signIn(email, password);
 
   if (error) {

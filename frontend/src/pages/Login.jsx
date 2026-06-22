@@ -6,7 +6,7 @@ import AuthForm from "../components/AuthForm";
 import useFormFields from "../hooks/useFormFields";
 import { login } from "../lib/api";
 
-export default function Login({ onLoginSuccess }) {
+export default function Login({ onAdminLoginSuccess, onLoginSuccess }) {
   const navigate = useNavigate();
 
   const [values, handleChange] = useFormFields({
@@ -24,14 +24,27 @@ export default function Login({ onLoginSuccess }) {
     setError("");
 
     try {
-      const response = await login({
+      const data = await login({
         email: values.email.trim(),
         password: values.password.trim(),
       });
 
-      onLoginSuccess?.(response);
-      navigate(response.redirectTo || "/dashboard", { replace: true });
+      if (data.isAdmin) {
+        localStorage.setItem("isAdmin", "true");
+        onAdminLoginSuccess?.();
+        navigate("/admin-dashboard", { replace: true });
+        return;
+      }
+
+      localStorage.removeItem("isAdmin");
+      localStorage.setItem("accessToken", data.session.accessToken);
+      localStorage.setItem("refreshToken", data.session.refreshToken);
+      localStorage.setItem("user", JSON.stringify(data.user));
+
+      onLoginSuccess?.(data);
+      navigate(data.redirectTo || "/dashboard", { replace: true });
     } catch (requestError) {
+      console.error(requestError);
       setError(requestError.message);
     } finally {
       setLoading(false);

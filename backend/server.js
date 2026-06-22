@@ -1,18 +1,30 @@
 import express from "express";
+import { createServer } from "node:http";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import hpp from "hpp";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+import { Server } from "socket.io";
 import authRoutes from "./src/routes/authRoute.js";
+import adminRoutes from "./src/routes/adminRoute.js";
 import dashboardRoutes from "./src/routes/dashboardRoute.js";
 
 dotenv.config();
 
 const app = express();
+const httpServer = createServer(app);
 const port = process.env.PORT || 5000;
 const clientOrigin = process.env.CLIENT_ORIGIN || "http://localhost:5173";
+const io = new Server(httpServer, {
+  cors: {
+    origin: clientOrigin,
+    credentials: true,
+  },
+});
+
+app.set("io", io);
 
 app.use(
   cors({
@@ -38,6 +50,7 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/admin", adminRoutes);
 app.use("/dashboard", dashboardRoutes);
 
 app.use((err, _req, res, _next) => {
@@ -47,7 +60,7 @@ app.use((err, _req, res, _next) => {
   });
 });
 
-app.listen(port, () => {
+httpServer.listen(port, () => {
   console.log(`Auth server running on port ${port}`);
 });
 
