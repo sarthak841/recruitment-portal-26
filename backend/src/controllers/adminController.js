@@ -1,4 +1,9 @@
-import { fetchAllCandidates, updateStatus } from "../services/adminService.js";
+import {
+  fetchAllCandidates,
+  updateStatus,
+  markQuizAttendance,
+  getAttendanceStatsService,
+} from "../services/adminService.js";
 
 export async function getAllCandidates(req, res) {
   try {
@@ -31,6 +36,38 @@ export async function updateCandidateStatus(req, res) {
 
     return res.status(500).json({
       message: error.message || "Failed to update status",
+    });
+  }
+}
+
+export async function markCandidateAttendance(req, res) {
+  try {
+    const { qrToken } = req.body;
+
+    const result = await markQuizAttendance(qrToken);
+
+    req.app.get("io")?.emit("candidate:updated", result.candidate);
+
+    return res.json(result);
+  } catch (error) {
+    console.error(error);
+
+    return res.status(400).json({
+      message: error.message || "Failed to mark attendance",
+    });
+  }
+}
+
+export async function getAttendanceStats(req, res) {
+  try {
+    const stats = await getAttendanceStatsService();
+
+    return res.json(stats);
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      message: "Failed to load attendance stats",
     });
   }
 }
