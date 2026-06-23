@@ -74,3 +74,16 @@ export async function getDashboard(signal) {
 
   return text || "Dashboard";
 }
+
+export function markAttendance(qrToken) {
+  return request("/api/admin/attendance", {
+    method: "POST",
+    body: JSON.stringify({
+      qrToken,
+    }),
+  });
+}
+
+export function getAttendanceStats() {
+  return request("/api/admin/attendance/stats");
+}

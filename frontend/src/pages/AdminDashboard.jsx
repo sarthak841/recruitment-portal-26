@@ -4,6 +4,7 @@ import "./AdminDashboard.css";
 import CandidateCard from "../components/CandidateCard";
 import CandidateDrawer from "../components/CandidateDrawer";
 import StatsGrid from "../components/StatsGrid";
+import AttendanceScanner from "../components/AttendanceScanner";
 
 import { useCandidates } from "../hooks/useCandidates";
 import { useCandidateFilters } from "../hooks/useCandidateFilters";
@@ -16,6 +17,7 @@ export default function AdminDashboard() {
   const { candidates, loading, fetchCandidates, updateStatus } =
     useCandidates();
 
+  const [showScanner, setShowScanner] = useState(false);
   const {
     search,
     setSearch,
@@ -55,6 +57,13 @@ export default function AdminDashboard() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+
+          <button
+            onClick={() => setShowScanner(true)}
+            style={{ width: "auto" }}
+          >
+            Scanner
+          </button>
 
           <button onClick={fetchCandidates} style={{ width: "auto" }}>
             Refresh
@@ -103,6 +112,10 @@ export default function AdminDashboard() {
           }
         }}
       />
+
+      {showScanner && (
+        <AttendanceScanner onClose={() => setShowScanner(false)} />
+      )}
     </div>
   );
 }
