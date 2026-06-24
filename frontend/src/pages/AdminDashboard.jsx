@@ -22,6 +22,7 @@ export default function AdminDashboard() {
     updateStatus,
     updateAttendance,
     removeCandidate,
+    toggleLock,
   } = useCandidates();
 
   const [showScanner, setShowScanner] = useState(false);
@@ -274,6 +275,10 @@ export default function AdminDashboard() {
         onDelete={async (id) => {
           const ok = await removeCandidate(id);
           if (ok) setSelectedCandidate(null);
+        }}
+        onToggleLock={async (id, locked) => {
+          const updated = await toggleLock(id, locked);
+          if (updated) setSelectedCandidate(updated);
         }}
       />
 

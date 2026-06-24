@@ -51,6 +51,15 @@ export function saveCandidateDetails(payload, token) {
   });
 }
 
+// Candidate self-edit (all fields except password, blocked when form_locked)
+export function updateCandidateDetails(payload, token) {
+  return request("/api/admin/candidate-details", {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(payload),
+  });
+}
+
 export function getCandidates() {
   return request("/api/admin/candidates");
 }
@@ -66,6 +75,14 @@ export function updateCandidateAttendance(id, present) {
   return request(`/api/admin/candidates/${id}/attendance`, {
     method: "PATCH",
     body: JSON.stringify({ present }),
+  });
+}
+
+// Toggle form lock — admin only
+export function lockCandidateForm(id, locked) {
+  return request(`/api/admin/candidates/${id}/lock`, {
+    method: "PATCH",
+    body: JSON.stringify({ locked }),
   });
 }
 

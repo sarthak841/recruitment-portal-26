@@ -4,6 +4,7 @@ import {
   updateCandidateStatus,
   updateCandidateAttendance,
   deleteCandidate,
+  lockCandidateForm,
 } from "../lib/api";
 
 import { adminSocket } from "../lib/socket";
@@ -64,6 +65,19 @@ export function useCandidates() {
     }
   }
 
+  async function toggleLock(id, locked) {
+    try {
+      const response = await lockCandidateForm(id, locked);
+      const updatedCandidate = response.data;
+      setCandidates((current) => upsertCandidate(current, updatedCandidate));
+      return updatedCandidate;
+    } catch (error) {
+      console.error(error);
+      alert(error.message || "Failed to update form lock.");
+      return null;
+    }
+  }
+
   useEffect(() => {
     fetchCandidates();
   }, []);
@@ -100,5 +114,6 @@ export function useCandidates() {
     updateStatus,
     updateAttendance,
     removeCandidate,
+    toggleLock,
   };
 }

@@ -94,3 +94,71 @@ export async function getAttendanceStatsService() {
 
   return { totalCandidates, presentCandidates };
 }
+
+// ── Form lock ──────────────────────────────────────────────────────────────
+
+export async function toggleFormLock(id, locked) {
+  const { data, error } = await supabaseAdmin
+    .from("candidate_profiles")
+    .update({ form_locked: locked })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+// ── Candidate self-edit ────────────────────────────────────────────────────
+
+const EDITABLE_FIELDS = [
+  "full_name",
+  "date_of_birth",
+  "attendance",
+  "join_reason",
+  "primary_department",
+  "secondary_department",
+  "other_societies",
+  "recruit_reason",
+];
+
+export async function updateCandidateDetails(userId, body) {
+  // First check if the form is locked
+  const { data: existing, error: fetchError } = await supabaseAdmin
+    .from("candidate_profiles")
+    .select("id, form_locked")
+    .eq("user_id", userId)
+    .single();
+
+  if (fetchError || !existing) throw new Error("Candidate profile not found.");
+  if (existing.form_locked)
+    throw new Error(
+      "Your form has been locked by the admin. No further changes can be made.",
+    );
+
+  // Build a safe update payload — only allowed fields
+  const payload = {};
+  for (const field of EDITABLE_FIELDS) {
+    if (
+      body[field] !== undefined &&
+      body[field] !== null &&
+      String(body[field]).trim() !== ""
+    ) {
+      payload[field] = String(body[field]).trim();
+    }
+  }
+
+  if (!Object.keys(payload).length) {
+    throw new Error("No valid fields provided for update.");
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from("candidate_profiles")
+    .update(payload)
+    .eq("id", existing.id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}

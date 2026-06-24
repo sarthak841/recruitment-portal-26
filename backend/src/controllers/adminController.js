@@ -5,7 +5,10 @@ import {
   deleteCandidate,
   markQuizAttendance,
   getAttendanceStatsService,
+  toggleFormLock,
+  updateCandidateDetails,
 } from "../services/adminService.js";
+import { bearerToken, userFromToken } from "../services/authService.js";
 
 export async function getAllCandidates(req, res) {
   try {
@@ -96,5 +99,59 @@ export async function getAttendanceStats(req, res) {
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Failed to load attendance stats" });
+  }
+}
+
+// ── Form lock (admin only) ─────────────────────────────────────────────────
+
+export async function lockCandidateForm(req, res) {
+  try {
+    const { id } = req.params;
+    const { locked } = req.body;
+
+    if (typeof locked !== "boolean") {
+      return res.status(400).json({ message: "`locked` must be a boolean" });
+    }
+
+    const data = await toggleFormLock(id, locked);
+    req.app.get("io")?.emit("candidate:updated", data);
+
+    return res.json({
+      message: locked ? "Form locked" : "Form unlocked",
+      data,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      message: error.message || "Failed to update form lock",
+    });
+  }
+}
+
+// ── Candidate self-edit (auth required) ───────────────────────────────────
+
+export async function updateOwnDetails(req, res) {
+  try {
+    const token = bearerToken(req);
+    if (!token)
+      return res.status(401).json({ message: "Missing access token." });
+
+    const user = await userFromToken(token);
+    if (!user)
+      return res.status(401).json({ message: "Invalid or expired session." });
+
+    const data = await updateCandidateDetails(user.id, req.body);
+    req.app.get("io")?.emit("candidate:updated", data);
+
+    return res.json({
+      message: "Details updated successfully.",
+      profile: data,
+    });
+  } catch (error) {
+    console.error(error);
+    const status = error.message?.includes("locked") ? 403 : 400;
+    return res
+      .status(status)
+      .json({ message: error.message || "Failed to update details." });
   }
 }
