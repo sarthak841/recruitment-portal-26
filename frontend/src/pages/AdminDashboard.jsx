@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from "react";
 import "./AdminDashboard.css";
 
-import mlscLogo from "../assets/mlsc-logo.png";
+import mlscLogo from "../assets/MLSC-logo.png";
 
 import CandidateCard from "../components/CandidateCard";
 import CandidateDrawer from "../components/CandidateDrawer";
@@ -117,7 +117,9 @@ export default function AdminDashboard() {
                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                     <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                   </svg>
-                  {globalLockLoading ? "Unlocking…" : "Locked (Click to Unlock)"}
+                  {globalLockLoading
+                    ? "Unlocking…"
+                    : "Locked (Click to Unlock)"}
                 </>
               ) : (
                 <>
