@@ -8,9 +8,12 @@ import AdminDashboard from "./pages/AdminDashboard";
 import { useAuth } from "./hooks/useAuth";
 
 export default function App() {
+  // Read from localStorage immediately (lazy initialiser) so a page
+  // refresh on /admin-dashboard doesn't flash-redirect to /login
   const [isAdmin, setIsAdmin] = useState(
     () => localStorage.getItem("isAdmin") === "true",
   );
+
   const {
     authReady,
     authSession,
@@ -24,14 +27,16 @@ export default function App() {
     return <main className="dashboard-page">Please Wait</main>;
   }
 
+  const handleAdminLogout = () => {
+    localStorage.removeItem("isAdmin");
+    setIsAdmin(false);
+  };
+
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/signup" replace />} />
 
-      <Route
-        path="/signup"
-        element={<Signup onSignupSuccess={register} />}
-      />
+      <Route path="/signup" element={<Signup onSignupSuccess={register} />} />
 
       <Route
         path="/login"
@@ -59,14 +64,16 @@ export default function App() {
 
       <Route
         path="/dashboard"
-        element={authSession ? <Dashboard /> : <Navigate to="/login" replace />}
+        element={
+          authSession ? <Dashboard /> : <Navigate to="/login" replace />
+        }
       />
 
       <Route
         path="/admin-dashboard"
         element={
           isAdmin ? (
-            <AdminDashboard />
+            <AdminDashboard onLogout={handleAdminLogout} />
           ) : (
             <Navigate to="/login" replace />
           )

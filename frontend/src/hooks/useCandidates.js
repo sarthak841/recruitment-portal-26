@@ -30,8 +30,6 @@ export function useCandidates() {
   const [globalLockLoading, setGlobalLockLoading] = useState(false);
   const [slotSummary, setSlotSummary] = useState([]);
   const [slotLoading, setSlotLoading] = useState(false);
-
-  // schedules: { days: [{day_number, slot_date}], times: [{slot_number, start_time}] }
   const [slotSchedules, setSlotSchedules] = useState({ days: [], times: [] });
   const [schedulesLoading, setSchedulesLoading] = useState(false);
 
@@ -39,9 +37,10 @@ export function useCandidates() {
     try {
       setLoading(true);
       const data = await getCandidates();
-      setCandidates(data);
+      // Handle both array response and paginated {data, total} response
+      setCandidates(Array.isArray(data) ? data : data.data ?? []);
     } catch (error) {
-      console.error(error);
+      console.error("fetchCandidates error:", error);
       alert(error.message || "Failed to load candidates.");
     } finally {
       setLoading(false);
@@ -139,7 +138,7 @@ export function useCandidates() {
   async function fetchSlotSummary() {
     try {
       const data = await getSlotSummary();
-      setSlotSummary(data);
+      setSlotSummary(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Failed to fetch slot summary:", error);
     }
@@ -148,7 +147,10 @@ export function useCandidates() {
   async function fetchSlotSchedules() {
     try {
       const data = await getSlotSchedules();
-      setSlotSchedules(data);
+      setSlotSchedules({
+        days: Array.isArray(data?.days) ? data.days : [],
+        times: Array.isArray(data?.times) ? data.times : [],
+      });
     } catch (error) {
       console.error("Failed to fetch slot schedules:", error);
     }
@@ -162,7 +164,7 @@ export function useCandidates() {
       await fetchSlotSummary();
       return result;
     } catch (error) {
-      console.error(error);
+      console.error("distributeSlots error:", error);
       alert(error.message || "Failed to distribute slots.");
       return null;
     } finally {
@@ -316,18 +318,19 @@ export function useCandidates() {
       setGlobalLocked(locked);
     }
 
+    // Wrapped in try/catch so a socket event never crashes the component
     function handleSlotsDistributed() {
-      fetchCandidates();
-      fetchSlotSummary();
+      fetchCandidates().catch(console.error);
+      fetchSlotSummary().catch(console.error);
     }
 
     function handleSlotsCleared() {
-      fetchCandidates();
+      fetchCandidates().catch(console.error);
       setSlotSummary([]);
     }
 
     function handleSchedulesUpdated() {
-      fetchSlotSchedules();
+      fetchSlotSchedules().catch(console.error);
     }
 
     adminSocket.on("candidate:submitted", handleCandidateChange);
