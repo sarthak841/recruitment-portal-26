@@ -1,20 +1,18 @@
-import { createUser, getUserByToken, signIn } from "../models/authModel.js";
-import { supabaseAuth } from "../config/supabase.js";
+import {
+  createUser,
+  getUserByToken,
+  signIn,
+  refreshSession,
+} from "../models/authModel.js";
 import {
   findCandidateByUserId,
-  isMissingCandidateTableError,
   mapCandidatePayload,
   upsertCandidateProfile,
   validateCandidatePayload,
 } from "../models/candidateModel.js";
 import { getGlobalLock } from "./adminService.js";
 
-export function buildSessionResponse(
-  session,
-  user,
-  profile = null,
-  redirectTo = null,
-) {
+export function buildSessionResponse(session, user, profile = null, redirectTo = null) {
   return {
     session: session
       ? {
@@ -39,50 +37,29 @@ export function bearerToken(req) {
 
 export async function fetchCandidateProfile(userId) {
   const { data, error } = await findCandidateByUserId(userId);
-
-  if (error) {
-    if (isMissingCandidateTableError(error)) {
-      return null;
-    }
-
-    throw error;
-  }
-
+  if (error) throw error;
   return data;
 }
 
 export async function registerUser(email, password) {
-  // Reject new signups when registrations are globally closed
   const globallyLocked = await getGlobalLock();
   if (globallyLocked) {
     return {
       error: {
-        message:
-          "Registrations are currently closed. New sign-ups are not allowed.",
+        message: "Registrations are currently closed. New sign-ups are not allowed.",
       },
     };
   }
 
-  const { data: createdUser, error: createError } = await createUser(
-    email,
-    password,
-  );
-
-  if (createError) {
-    return { error: createError };
-  }
+  const { data: createdUser, error: createError } = await createUser(email, password);
+  if (createError) return { error: createError };
 
   const { data, error } = await signIn(email, password);
 
   return {
     data: error
       ? buildSessionResponse(null, createdUser.user, null, "/candidate-details")
-      : buildSessionResponse(
-          data.session,
-          data.user,
-          null,
-          "/candidate-details",
-        ),
+      : buildSessionResponse(data.session, data.user, null, "/candidate-details"),
   };
 }
 
@@ -96,19 +73,11 @@ export async function loginUser(email, password) {
     email.toLowerCase() === adminEmail &&
     password === adminPassword
   ) {
-    return {
-      data: {
-        isAdmin: true,
-        redirectTo: "/admin-dashboard",
-      },
-    };
+    return { data: { isAdmin: true, redirectTo: "/admin-dashboard" } };
   }
 
   const { data, error } = await signIn(email, password);
-
-  if (error) {
-    return { error };
-  }
+  if (error) return { error };
 
   return {
     data: buildSessionResponse(
@@ -121,13 +90,8 @@ export async function loginUser(email, password) {
 }
 
 export async function refreshUserSession(refreshToken) {
-  const { data, error } = await supabaseAuth.auth.refreshSession({
-    refresh_token: refreshToken,
-  });
-
-  if (error) {
-    return { error };
-  }
+  const { data, error } = await refreshSession(refreshToken);
+  if (error) return { error };
 
   return {
     data: buildSessionResponse(
@@ -141,27 +105,20 @@ export async function refreshUserSession(refreshToken) {
 
 export async function userFromToken(token) {
   const { data, error } = await getUserByToken(token);
-
-  if (error || !data?.user) {
-    return null;
-  }
-
+  if (error || !data?.user) return null;
   return data.user;
 }
 
 export async function saveCandidate(body, user) {
-  // Reject form submissions when registrations are globally closed
   const globallyLocked = await getGlobalLock();
   if (globallyLocked) {
     return {
       status: 403,
-      error:
-        "Registrations are currently closed. No new submissions are allowed.",
+      error: "Registrations are currently closed. No new submissions are allowed.",
     };
   }
 
   const missingFields = validateCandidatePayload(body);
-
   if (missingFields.length) {
     return {
       status: 400,
@@ -169,18 +126,8 @@ export async function saveCandidate(body, user) {
     };
   }
 
-  const { data, error } = await upsertCandidateProfile(
-    mapCandidatePayload(body, user),
-  );
+  const { data, error } = await upsertCandidateProfile(mapCandidatePayload(body, user));
+  if (error) return { status: 400, error: error.message };
 
-  if (!error) {
-    return { data };
-  }
-
-  return {
-    status: isMissingCandidateTableError(error) ? 503 : 400,
-    error: isMissingCandidateTableError(error)
-      ? "Candidate profile table is missing in Supabase. Run backend/supabase/schema.sql and refresh the schema cache."
-      : error.message,
-  };
+  return { data };
 }
