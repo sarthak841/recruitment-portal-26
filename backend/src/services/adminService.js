@@ -34,14 +34,30 @@ export async function updateAttendance(id, present) {
 }
 
 export async function deleteCandidate(id) {
-  // Delete from users — cascades to candidate_profiles, candidate_form,
-  // candidate_status, candidate_quiz via ON DELETE CASCADE
-  await db.execute({
-    sql: `DELETE FROM users WHERE id = (
-      SELECT user_id FROM candidate_profiles WHERE id = ?
-    )`,
+  // FIX (Bug 1): Resolve the user_id first, then delete refresh_tokens explicitly
+  // before removing the user row. Although the schema has ON DELETE CASCADE on
+  // refresh_tokens.user_id, explicitly deleting them first guarantees the email
+  // is fully free for re-registration even if Turso's cascade has any lag.
+  // We use db.batch() so all statements run atomically.
+
+  const cpRow = await db.execute({
+    sql: "SELECT user_id FROM candidate_profiles WHERE id = ?",
     args: [id],
   });
+
+  const userId = cpRow.rows[0]?.user_id;
+  if (!userId) throw new Error("Candidate not found.");
+
+  await db.batch(
+    [
+      // Explicitly revoke all refresh tokens so the deleted user cannot refresh
+      { sql: "DELETE FROM refresh_tokens WHERE user_id = ?", args: [userId] },
+      // Deleting from users cascades: candidate_profiles, candidate_form,
+      // candidate_status, candidate_quiz (all have ON DELETE CASCADE).
+      { sql: "DELETE FROM users WHERE id = ?", args: [userId] },
+    ],
+    "write",
+  );
 }
 
 // ── QR Attendance ──────────────────────────────────────────────────────────
@@ -67,7 +83,13 @@ async function resolveCandidateSlotDateTime(slotId) {
   const startTime = timeResult.rows[0]?.start_time;
   if (!slotDate || !startTime) return null;
 
-  const dt = new Date(`${slotDate}T${startTime}`);
+  // FIX: new Date("YYYY-MM-DDTHH:MM") with no timezone suffix is parsed as UTC
+  // by the JS engine. Slot times are entered in IST (UTC+5:30), so appending
+  // the IST offset makes the Date represent the correct instant in time.
+  // Without this, a 10:00 AM IST slot is treated as 10:00 AM UTC (3:30 PM IST),
+  // causing the unlock window check to fire ~5h30m too late.
+  const IST_OFFSET = "+05:30";
+  const dt = new Date(`${slotDate}T${startTime}${IST_OFFSET}`);
   return Number.isNaN(dt.getTime()) ? null : dt;
 }
 
