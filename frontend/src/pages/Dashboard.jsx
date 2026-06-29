@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
-import { updateCandidateDetails, getSlotSchedules } from "../lib/api";
+import { updateCandidateDetails } from "../lib/api";
 import mlscLogo from "../assets/MLSC-logo.png";
 import "./CandidateDashboard.css";
 
@@ -35,8 +35,11 @@ function useSlotInfo(slotId) {
 
         if (cancelled) return;
 
-        const row = summary.find((s) => s.id === slotId);
-        if (!row) { setSlotInfo(null); return; }
+        const row = summary.find((s) => Number(s.id) === Number(slotId));
+        if (!row) {
+          setSlotInfo(null);
+          return;
+        }
 
         const dayRow = (schedules.days || []).find(
           (d) => d.day_number === row.slot_day,
@@ -136,30 +139,12 @@ function formatUnlockMoment(date) {
 const SUPPORT = { email: "mlsc@thapar.edu", phone: "+91 9720257315" };
 
 const FAQS = [
-  {
-    q: "When will the recruitment test be conducted?",
-    a: "The test will be held on the date and time shown in the Test Schedule card above.",
-  },
-  {
-    q: "Can I change my department preference?",
-    a: "You can edit your details using the Edit Details button before the deadline.",
-  },
-  {
-    q: "What should I bring for the test?",
-    a: "Bring your college ID card and any materials mentioned in the recruitment guidelines.",
-  },
-  {
-    q: "How will I know my selection status?",
-    a: "Status updates will be shared via email and reflected in this portal.",
-  },
-  {
-    q: "Can I edit my application after submission?",
-    a: "You may update your details via Edit Details until the deadline.",
-  },
-  {
-    q: "Whom should I contact for technical issues?",
-    a: "Reach out to the support team using the contact details in the Contact Support section below.",
-  },
+  { q: "When will the recruitment test be conducted?", a: "The test will be held on the date and time shown in the Test Schedule card above." },
+  { q: "Can I change my department preference?", a: "You can edit your details using the Edit Details button before the deadline." },
+  { q: "What should I bring for the test?", a: "Bring your college ID card and any materials mentioned in the recruitment guidelines." },
+  { q: "How will I know my selection status?", a: "Status updates will be shared via email and reflected in this portal." },
+  { q: "Can I edit my application after submission?", a: "You may update your details via Edit Details until the deadline." },
+  { q: "Whom should I contact for technical issues?", a: "Reach out to the support team using the contact details in the Contact Support section below." },
 ];
 
 const DEPT_BADGE_CLASS = {
@@ -206,9 +191,7 @@ function ToastStack({ toasts, dismiss }) {
             {t.type === "success" ? "✓" : t.type === "error" ? "✕" : "!"}
           </span>
           <span className="cd-toast-msg">{t.message}</span>
-          <button className="cd-toast-close" onClick={() => dismiss(t.id)} aria-label="Dismiss">
-            ×
-          </button>
+          <button className="cd-toast-close" onClick={() => dismiss(t.id)} aria-label="Dismiss">×</button>
         </div>
       ))}
     </div>
@@ -271,16 +254,13 @@ function QRCard({ qrToken, slotInfo }) {
             {earlyBanner ? (
               <div className="cd-qr-early-warning">
                 <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <circle cx="12" cy="12" r="10" />
-                  <polyline points="12 6 12 12 16 14" />
+                  <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
                 </svg>
                 <div>
                   <strong>Your slot is scheduled for {earlyBanner.slotLabel}</strong>
                   <p>
-                    This QR code will only be accepted from{" "}
-                    <strong>{earlyBanner.unlockLabel}</strong> onwards —
-                    {QR_UNLOCK_MINUTES_BEFORE} minutes before your slot.
-                    Scanning it earlier will not mark attendance.
+                    This QR code will only be accepted from <strong>{earlyBanner.unlockLabel}</strong> onwards —
+                    {QR_UNLOCK_MINUTES_BEFORE} minutes before your slot. Scanning it earlier will not mark attendance.
                   </p>
                 </div>
               </div>
@@ -288,22 +268,15 @@ function QRCard({ qrToken, slotInfo }) {
               <div className="cd-qr-early-warning cd-qr-early-warning--info">
                 <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <circle cx="12" cy="12" r="10" />
-                  <line x1="12" y1="8" x2="12" y2="12" />
-                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                  <line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
                 </svg>
                 <div>
                   <strong>Slot date &amp; time not yet configured</strong>
-                  <p>
-                    The admin hasn't set a date and time for your slot yet. Your
-                    QR code is ready — you'll be able to use it once the schedule is confirmed.
-                  </p>
+                  <p>The admin hasn't set a date and time for your slot yet. Your QR code is ready — you'll be able to use it once the schedule is confirmed.</p>
                 </div>
               </div>
             ) : (
-              <p className="cd-qr-hint">
-                Show this QR code at the venue to mark your attendance. Keep
-                this screen visible or take a screenshot before the test.
-              </p>
+              <p className="cd-qr-hint">Show this QR code at the venue to mark your attendance. Keep this screen visible or take a screenshot before the test.</p>
             )}
             <p className="cd-qr-tap-hint">Tap the QR code to enlarge it.</p>
           </div>
@@ -312,13 +285,7 @@ function QRCard({ qrToken, slotInfo }) {
 
       {enlarged && (
         <div className="cd-modal-backdrop" onClick={() => setEnlarged(false)}>
-          <div
-            className="cd-modal cd-qr-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Enlarged QR code"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="cd-modal cd-qr-modal" role="dialog" aria-modal="true" aria-label="Enlarged QR code" onClick={(e) => e.stopPropagation()}>
             <div className="cd-modal-header">
               <h2>Entry QR Code</h2>
               <button className="cd-modal-close" onClick={() => setEnlarged(false)} aria-label="Close">×</button>
@@ -327,8 +294,7 @@ function QRCard({ qrToken, slotInfo }) {
               {earlyBanner && (
                 <div className="cd-qr-early-warning cd-qr-early-warning--modal">
                   <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <circle cx="12" cy="12" r="10" />
-                    <polyline points="12 6 12 12 16 14" />
+                    <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
                   </svg>
                   <div>
                     <strong>Slot: {earlyBanner.slotLabel}</strong>
@@ -374,11 +340,8 @@ function FAQItem({ q, a }) {
   );
 }
 
-// ─── Edit modal ────────────────────────────────────────────────────────────────
-// FIX: Accepts getFreshToken instead of a static token so it always has a
-//      valid access token at the moment the user clicks Save.
-
-function EditModal({ profile, getFreshToken, onClose, onSaved, onLocked }) {
+function EditModal({ profile, token, onClose, onSaved, onLocked }) {
+  // Fix: Turso returns 0/1 integers, not booleans
   const isLocked = Boolean(profile.form_locked);
 
   const [fields, setFields] = useState({
@@ -414,16 +377,7 @@ function EditModal({ profile, getFreshToken, onClose, onSaved, onLocked }) {
 
     setSaving(true);
     setError("");
-
     try {
-      // ← Always get a fresh token right before the request
-      const token = await getFreshToken();
-      if (!token) {
-        setError("Your session has expired. Please log in again.");
-        setSaving(false);
-        return;
-      }
-
       const res = await updateCandidateDetails(fields, token);
       onSaved(res.profile);
       onClose();
@@ -431,12 +385,6 @@ function EditModal({ profile, getFreshToken, onClose, onSaved, onLocked }) {
       if (err.message?.toLowerCase().includes("locked")) {
         onLocked();
         onClose();
-      } else if (
-        err.message?.toLowerCase().includes("session") ||
-        err.message?.toLowerCase().includes("expired") ||
-        err.message?.toLowerCase().includes("invalid")
-      ) {
-        setError("Your session has expired. Please log in again.");
       } else {
         setError(err.message || "Failed to save. Try again.");
       }
@@ -445,21 +393,11 @@ function EditModal({ profile, getFreshToken, onClose, onSaved, onLocked }) {
     }
   }
 
-  const secondaryOptions = DEPT_OPTIONS.filter(
-    (d) => d !== fields.primary_department,
-  );
+  const secondaryOptions = DEPT_OPTIONS.filter((d) => d !== fields.primary_department);
 
   return (
-    <div
-      className="cd-modal-backdrop"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-    >
-      <div
-        className="cd-modal cd-modal--wide"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="edit-modal-title"
-      >
+    <div className="cd-modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="cd-modal cd-modal--wide" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
         <div className="cd-modal-header">
           <h2 id="edit-modal-title">Edit Details</h2>
           <button className="cd-modal-close" onClick={onClose} aria-label="Close">×</button>
@@ -485,27 +423,21 @@ function EditModal({ profile, getFreshToken, onClose, onSaved, onLocked }) {
                 <label htmlFor="edit-name">Full Name</label>
                 <input id="edit-name" type="text" value={fields.full_name} onChange={(e) => set("full_name", e.target.value)} />
               </div>
-
               <div className="cd-field">
                 <label htmlFor="edit-email">Email</label>
                 <input id="edit-email" type="email" value={profile.email ?? ""} disabled title="Email cannot be changed" />
               </div>
-
               <div className="cd-field">
                 <label htmlFor="edit-dob">Date of Birth</label>
                 <input id="edit-dob" type="date" value={fields.date_of_birth} onChange={(e) => set("date_of_birth", e.target.value)} />
               </div>
-
               <div className="cd-field">
                 <label htmlFor="edit-attendance">Tech Meet &amp; Society Fair Attendance</label>
                 <select id="edit-attendance" value={fields.attendance} onChange={(e) => set("attendance", e.target.value)}>
                   <option value="">Select one</option>
-                  {ATTENDANCE_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
+                  {ATTENDANCE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
               </div>
-
               <div className="cd-field">
                 <label htmlFor="edit-primary">Primary Department</label>
                 <select id="edit-primary" value={fields.primary_department} onChange={(e) => set("primary_department", e.target.value)}>
@@ -513,7 +445,6 @@ function EditModal({ profile, getFreshToken, onClose, onSaved, onLocked }) {
                   {DEPT_OPTIONS.map((d) => <option key={d} value={d}>{d}</option>)}
                 </select>
               </div>
-
               <div className="cd-field">
                 <label htmlFor="edit-secondary">Secondary Department</label>
                 <select id="edit-secondary" value={fields.secondary_department} onChange={(e) => set("secondary_department", e.target.value)}>
@@ -521,17 +452,14 @@ function EditModal({ profile, getFreshToken, onClose, onSaved, onLocked }) {
                   {secondaryOptions.map((d) => <option key={d} value={d}>{d}</option>)}
                 </select>
               </div>
-
               <div className="cd-field cd-field--full">
                 <label htmlFor="edit-join">Why do you want to join MLSC?</label>
                 <textarea id="edit-join" rows={3} value={fields.join_reason} onChange={(e) => set("join_reason", e.target.value)} />
               </div>
-
               <div className="cd-field cd-field--full">
                 <label htmlFor="edit-societies">Other societies you are part of</label>
                 <textarea id="edit-societies" rows={2} value={fields.other_societies} onChange={(e) => set("other_societies", e.target.value)} />
               </div>
-
               <div className="cd-field cd-field--full">
                 <label htmlFor="edit-recruit">Why should we recruit you?</label>
                 <textarea id="edit-recruit" rows={3} value={fields.recruit_reason} onChange={(e) => set("recruit_reason", e.target.value)} />
@@ -557,13 +485,15 @@ function EditModal({ profile, getFreshToken, onClose, onSaved, onLocked }) {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  // FIX: destructure getFreshToken from useAuth
-  const { candidateProfile, getFreshToken, saveProfile, logout } = useAuth();
+  const { candidateProfile, authSession, saveProfile, logout } = useAuth();
   const [profile, setProfile] = useState(candidateProfile ?? {});
   const [showEdit, setShowEdit] = useState(false);
   const { toasts, push, dismiss } = useToasts();
 
   const slotInfo = useSlotInfo(profile.slot_id ?? null);
+
+  // Fix: Turso returns 0/1 integers, not booleans
+  const isLocked = Boolean(profile.form_locked);
 
   const initials = (profile.full_name ?? "?")
     .split(" ")
@@ -573,7 +503,6 @@ export default function Dashboard() {
 
   const status = profile.application_status ?? "Pending";
   const statusKey = status.toLowerCase();
-  const isLocked = Boolean(profile.form_locked);
 
   function handleSaved(updatedProfile) {
     const merged = { ...profile, ...updatedProfile };
@@ -583,7 +512,7 @@ export default function Dashboard() {
   }
 
   function handleLockedByServer() {
-    setProfile((p) => ({ ...p, form_locked: true }));
+    setProfile((p) => ({ ...p, form_locked: 1 }));
     push("Your form has been locked by an admin. No further changes can be made.", "error");
   }
 
@@ -602,6 +531,7 @@ export default function Dashboard() {
     <main className="cd">
       <ToastStack toasts={toasts} dismiss={dismiss} />
 
+      {/* ── Header ── */}
       <header className="cd-header">
         <div className="cd-brand">
           <div className="cd-logo"><img src={mlscLogo} alt="MLSC Logo" /></div>
@@ -610,10 +540,7 @@ export default function Dashboard() {
             <p className="cd-header-sub">Your application dashboard</p>
           </div>
         </div>
-        <button
-          className="cd-btn cd-btn--danger-ghost"
-          onClick={() => { logout(); navigate("/login"); }}
-        >
+        <button className="cd-btn cd-btn--danger-ghost" onClick={() => { logout(); navigate("/login"); }}>
           <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
             <polyline points="16 17 21 12 16 7" />
@@ -623,6 +550,7 @@ export default function Dashboard() {
         </button>
       </header>
 
+      {/* ── Welcome banner ── */}
       <div className="cd-welcome">
         <div className="cd-welcome-text">
           <h2>Welcome back, {profile.full_name?.split(" ")[0] ?? "Candidate"}</h2>
@@ -635,6 +563,7 @@ export default function Dashboard() {
         <div className="cd-welcome-avatar" aria-hidden="true">{initials}</div>
       </div>
 
+      {/* ── Form locked banner ── */}
       {isLocked && (
         <div className="cd-locked-banner">
           <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -648,6 +577,7 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* ── Application Details ── */}
       <div className="cd-card">
         <div className="cd-card-header">
           <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -731,8 +661,10 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* ── QR Code ── */}
       <QRCard qrToken={profile.qr_token} slotInfo={slotInfo} />
 
+      {/* ── Slot Assignment ── */}
       {(() => {
         const sid = profile.slot_id;
 
@@ -742,17 +674,14 @@ export default function Dashboard() {
               <div className="cd-card-header">
                 <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                  <line x1="16" y1="2" x2="16" y2="6" />
-                  <line x1="8" y1="2" x2="8" y2="6" />
-                  <line x1="3" y1="10" x2="21" y2="10" />
+                  <line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
                 </svg>
                 <h3>Slot Assigned</h3>
               </div>
               <div className="cd-slot-pending">
                 <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="10" />
-                  <line x1="12" y1="8" x2="12" y2="12" />
-                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                  <line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
                 </svg>
                 Slot not assigned yet. Check back after some time.
               </div>
@@ -766,9 +695,7 @@ export default function Dashboard() {
               <div className="cd-card-header">
                 <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                  <line x1="16" y1="2" x2="16" y2="6" />
-                  <line x1="8" y1="2" x2="8" y2="6" />
-                  <line x1="3" y1="10" x2="21" y2="10" />
+                  <line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
                 </svg>
                 <h3>Your Assigned Slot</h3>
               </div>
@@ -785,9 +712,7 @@ export default function Dashboard() {
             <div className="cd-card-header">
               <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                <line x1="16" y1="2" x2="16" y2="6" />
-                <line x1="8" y1="2" x2="8" y2="6" />
-                <line x1="3" y1="10" x2="21" y2="10" />
+                <line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
               </svg>
               <h3>Your Assigned Slot</h3>
             </div>
@@ -795,9 +720,7 @@ export default function Dashboard() {
               <div className="cd-schedule-item">
                 <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                  <line x1="16" y1="2" x2="16" y2="6" />
-                  <line x1="8" y1="2" x2="8" y2="6" />
-                  <line x1="3" y1="10" x2="21" y2="10" />
+                  <line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
                 </svg>
                 <span className="cd-schedule-value">Day {slotInfo.day}</span>
                 {dateLabel && <span className="cd-schedule-sub">{dateLabel}</span>}
@@ -805,8 +728,7 @@ export default function Dashboard() {
               </div>
               <div className="cd-schedule-item">
                 <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10" />
-                  <polyline points="12 6 12 12 16 14" />
+                  <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
                 </svg>
                 <span className="cd-schedule-value">Slot {slotInfo.num}</span>
                 {timeLabel && <span className="cd-schedule-sub">{timeLabel}</span>}
@@ -828,6 +750,7 @@ export default function Dashboard() {
         );
       })()}
 
+      {/* ── FAQ ── */}
       <div className="cd-card">
         <div className="cd-card-header">
           <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -842,6 +765,7 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* ── Contact Support ── */}
       <div className="cd-card">
         <div className="cd-card-header">
           <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -880,11 +804,11 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* FIX: pass getFreshToken instead of authSession?.accessToken */}
+      {/* ── Edit modal ── */}
       {showEdit && (
         <EditModal
           profile={profile}
-          getFreshToken={getFreshToken}
+          token={authSession?.accessToken}
           onClose={() => setShowEdit(false)}
           onSaved={handleSaved}
           onLocked={handleLockedByServer}

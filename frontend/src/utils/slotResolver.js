@@ -1,29 +1,28 @@
-// Resolves a candidate's slot_id (UUID, FK -> public.slots.id) into the
+// Resolves a candidate's slot_id (integer FK -> slots.id) into the
 // human-facing date / time / venue, using the slot summary (day, number,
-// venue per UUID) and slot schedules (day -> date, slot number -> start time)
+// venue per id) and slot schedules (day -> date, slot number -> start time)
 // that the admin has configured.
-//
-// This intentionally never shows the raw UUID to admins — it's an opaque
-// database key with no meaning to a human reviewing candidates.
 
 export function resolveSlot(slotId, slotSummary, slotSchedules) {
-  if (!slotId) return null;
+  if (!slotId && slotId !== 0) return null;
 
-  const row = (slotSummary || []).find((s) => s.id === slotId);
+  // Turso returns integers — force both sides to Number for safe comparison
+  const id = Number(slotId);
+  const row = (slotSummary || []).find((s) => Number(s.id) === id);
   if (!row) return null;
 
   const days = slotSchedules?.days || [];
   const times = slotSchedules?.times || [];
 
-  const dayRow = days.find((d) => d.day_number === row.slot_day);
-  const timeRow = times.find((t) => t.slot_number === row.slot_number);
+  const dayRow = days.find((d) => Number(d.day_number) === Number(row.slot_day));
+  const timeRow = times.find((t) => Number(t.slot_number) === Number(row.slot_number));
 
   return {
     day: row.slot_day,
     num: row.slot_number,
     venue: row.slot_venue,
-    slotDate: dayRow?.slot_date ?? null, // "YYYY-MM-DD" or null
-    startTime: timeRow?.start_time ?? null, // "HH:MM:SS" or null
+    slotDate: dayRow?.slot_date ?? null,   // "YYYY-MM-DD" or null
+    startTime: timeRow?.start_time ?? null, // "HH:MM" or null
   };
 }
 
@@ -62,6 +61,5 @@ export function formatSlotSummary(slotId, slotSummary, slotSchedules) {
   if (dateLabel) {
     return `${dateLabel} · ${resolved.venue}`;
   }
-  // Date/time not configured yet — at least show the venue + day/slot number.
   return `Day ${resolved.day}, Slot ${resolved.num} · ${resolved.venue}`;
 }
