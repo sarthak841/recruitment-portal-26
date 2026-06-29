@@ -45,6 +45,28 @@ export async function login(req, res) {
     : res.json(data);
 }
 
+// ── Normalize snake_case session from authModel into the camelCase shape
+//    that useAuth.js expects: { accessToken, refreshToken, expiresAt }
+//    The login flow already returns this shape (via loginUser/authService).
+//    The raw refreshSession from authModel returns { access_token, refresh_token, expires_at }.
+function normalizeSession(raw) {
+  if (!raw) return null;
+  // Already camelCase (came through authService wrapper) — pass through
+  if (raw.accessToken) return raw;
+  // Snake_case from authModel.refreshSession — convert
+  return {
+    accessToken: raw.access_token,
+    refreshToken: raw.refresh_token,
+    expiresAt: raw.expires_at
+      ? // expires_at is an ISO string from the DB; convert to unix seconds
+        // so it matches the shape produced by loginUser
+        typeof raw.expires_at === "number"
+          ? raw.expires_at
+          : Math.floor(new Date(raw.expires_at).getTime() / 1000)
+      : null,
+  };
+}
+
 export async function refresh(req, res) {
   const refreshToken = cleanText(req.body.refreshToken);
 
@@ -54,9 +76,17 @@ export async function refresh(req, res) {
 
   const { data, error } = await refreshUserSession(refreshToken);
 
-  return error
-    ? res.status(401).json({ message: error.message })
-    : res.json(data);
+  if (error) {
+    return res.status(401).json({ message: error.message });
+  }
+
+  // Normalize the session shape before sending to the client so that
+  // useAuth.js always receives { session: { accessToken, refreshToken, expiresAt }, user }
+  // regardless of whether the raw model returned snake_case keys.
+  return res.json({
+    ...data,
+    session: normalizeSession(data.session),
+  });
 }
 
 export async function saveCandidateDetails(req, res) {

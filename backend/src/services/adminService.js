@@ -34,8 +34,12 @@ export async function updateAttendance(id, present) {
 }
 
 export async function deleteCandidate(id) {
+  // Delete from users — cascades to candidate_profiles, candidate_form,
+  // candidate_status, candidate_quiz via ON DELETE CASCADE
   await db.execute({
-    sql: "DELETE FROM candidate_profiles WHERE id = ?",
+    sql: `DELETE FROM users WHERE id = (
+      SELECT user_id FROM candidate_profiles WHERE id = ?
+    )`,
     args: [id],
   });
 }

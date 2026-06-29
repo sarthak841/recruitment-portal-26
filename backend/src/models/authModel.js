@@ -26,7 +26,6 @@ export async function createUser(email, password) {
     });
     return { data: { user: user.rows[0] }, error: null };
   } catch (err) {
-    // SQLite unique constraint = SQLITE_CONSTRAINT
     if (err.message?.includes("UNIQUE")) {
       return { data: null, error: { message: "A user with that email already exists." } };
     }
@@ -54,7 +53,6 @@ export async function signIn(email, password) {
   const accessToken = signAccess(payload);
   const refreshToken = signRefresh(payload);
 
-  // Persist refresh token
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
   await db.execute({
     sql: "INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES (?, ?, ?)",
@@ -77,7 +75,6 @@ export async function signIn(email, password) {
 export async function getUserByToken(token) {
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-    // Re-fetch from DB to ensure user still exists
     const result = await db.execute({
       sql: "SELECT id, email, role FROM users WHERE id = ?",
       args: [payload.id],
@@ -94,7 +91,6 @@ export async function refreshSession(refreshToken) {
   try {
     const payload = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
 
-    // Check token exists in DB and is not revoked/expired
     const stored = await db.execute({
       sql: "SELECT id, revoked, expires_at FROM refresh_tokens WHERE token = ? AND user_id = ?",
       args: [refreshToken, payload.id],
@@ -116,7 +112,6 @@ export async function refreshSession(refreshToken) {
     const user = userResult.rows[0];
     if (!user) return { data: null, error: { message: "User not found." } };
 
-    // Rotate: revoke old, issue new
     await db.execute({
       sql: "UPDATE refresh_tokens SET revoked = 1 WHERE id = ?",
       args: [tokenRow.id],
@@ -145,5 +140,22 @@ export async function refreshSession(refreshToken) {
     };
   } catch {
     return { data: null, error: { message: "Invalid or expired refresh token." } };
+  }
+}
+
+// ── FIX: Hard-delete a user by their users.id ─────────────────────────────────
+// Because the schema has ON DELETE CASCADE on every child table
+// (candidate_profiles → candidate_form, candidate_status, candidate_quiz,
+//  refresh_tokens), deleting from users is all that's needed.
+// After this, the email is completely free and signup will succeed again.
+export async function deleteUserById(userId) {
+  try {
+    await db.execute({
+      sql: "DELETE FROM users WHERE id = ?",
+      args: [userId],
+    });
+    return { error: null };
+  } catch (err) {
+    return { error: { message: err.message } };
   }
 }

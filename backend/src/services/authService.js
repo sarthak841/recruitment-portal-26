@@ -12,13 +12,24 @@ import {
 } from "../models/candidateModel.js";
 import { getGlobalLock } from "./adminService.js";
 
+// ── Convert whatever expires_at the model returns into a Unix timestamp
+//    (seconds). authModel.signIn returns a number already; authModel.refreshSession
+//    returns an ISO string. Normalising here means useAuth.js secondsUntilExpiry()
+//    always gets a number, not NaN, so tokens are never wrongly treated as expired.
+function toUnixSeconds(value) {
+  if (!value) return null;
+  if (typeof value === "number") return value;
+  const ms = new Date(value).getTime();
+  return Number.isNaN(ms) ? null : Math.floor(ms / 1000);
+}
+
 export function buildSessionResponse(session, user, profile = null, redirectTo = null) {
   return {
     session: session
       ? {
           accessToken: session.access_token,
           refreshToken: session.refresh_token,
-          expiresAt: session.expires_at,
+          expiresAt: toUnixSeconds(session.expires_at),
         }
       : null,
     user: {
