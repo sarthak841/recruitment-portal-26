@@ -89,7 +89,6 @@ export default function CandidateDetails({
 }) {
   const navigate = useNavigate();
   const [values, handleChange, setValues] = useFormFields(initialDetails);
-  const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -117,7 +116,6 @@ export default function CandidateDetails({
           : departmentOptions;
     }
 
-    // When primary dept changes, clear secondary if it matches
     const onChange = (e) => {
       handleChange(e);
       if (
@@ -146,7 +144,6 @@ export default function CandidateDetails({
     );
   };
 
-  // Secondary dept options exclude whatever primary is set to
   const secondaryDeptOptions = departmentOptions.filter(
     (opt) => opt.value === "" || opt.value !== values.primaryDepartment,
   );
@@ -167,7 +164,6 @@ export default function CandidateDetails({
 
     setLoading(true);
     setError("");
-    setStatus("");
 
     const token = registrationData?.accessToken;
 
@@ -180,16 +176,16 @@ export default function CandidateDetails({
     try {
       const response = await saveCandidateDetails(values, token);
 
-      const successMessage = "Your details have been saved successfully.";
-
-      setStatus(successMessage);
+      // FIX: Only call onSaved — let the parent (App/router) show the success
+      // toast and redirect. Do NOT set a local `status` state here too, which
+      // was causing the message to appear twice (once here, once via onSaved).
       onSaved?.(response);
-      navigate(response.redirectTo || "/dashboard", {
-        replace: true,
-        state: { successMessage },
-      });
+
+      // Navigate immediately — the Dashboard will show the welcome state.
+      // The parent can push a successMessage via location state if desired.
+      navigate(response.redirectTo || "/dashboard", { replace: true });
     } catch (requestError) {
-      setError(requestError.message);
+      setError(requestError.message || "Failed to save details. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -257,8 +253,10 @@ export default function CandidateDetails({
             {loading ? "Saving..." : "Save candidate details"}
           </button>
         </div>
+
+        {/* FIX: Only show error here. Success is handled by navigation to
+            dashboard — no local status message to avoid double toast. */}
         {error ? <p className="form-error">{error}</p> : null}
-        {status ? <p className="form-success">{status}</p> : null}
       </form>
     </AuthPanel>
   );

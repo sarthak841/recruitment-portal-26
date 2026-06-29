@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import Signup from "./pages/Signup";
 import Login from "./pages/Login";
@@ -6,10 +6,9 @@ import CandidateDetails from "./pages/CandidateDetails";
 import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import { useAuth } from "./hooks/useAuth";
+import { setTokenRefresher } from "./lib/api";
 
 export default function App() {
-  // Read from localStorage immediately (lazy initialiser) so a page
-  // refresh on /admin-dashboard doesn't flash-redirect to /login
   const [isAdmin, setIsAdmin] = useState(
     () => localStorage.getItem("isAdmin") === "true",
   );
@@ -21,7 +20,14 @@ export default function App() {
     login,
     register,
     saveProfile,
+    getFreshToken, // ← new
   } = useAuth();
+
+  // Wire the token refresher once so every authenticated api.js request
+  // can silently recover from a 401 without the user seeing "session expired"
+  useEffect(() => {
+    setTokenRefresher(getFreshToken);
+  }, [getFreshToken]);
 
   if (!authReady) {
     return <main className="dashboard-page">Please Wait</main>;

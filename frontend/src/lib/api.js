@@ -2,7 +2,22 @@ const apiBaseUrl = (
   import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"
 ).replace(/\/$/, "");
 
-async function request(path, options = {}) {
+// ── Token refresh callback ─────────────────────────────────────────────────────
+// Set this once from your auth hook so the request() function can refresh
+// the access token transparently on 401 without importing useAuth
+// (hooks can't be called outside of React components).
+//
+// Usage in your root component or auth provider:
+//   import { setTokenRefresher } from "../lib/api";
+//   setTokenRefresher(() => getFreshToken());
+//
+let _tokenRefresher = null;
+export function setTokenRefresher(fn) {
+  _tokenRefresher = fn;
+}
+
+// ── Core fetch wrapper ────────────────────────────────────────────────────────
+async function request(path, options = {}, _isRetry = false) {
   const { headers, ...requestOptions } = options;
 
   const response = await fetch(`${apiBaseUrl}${path}`, {
@@ -13,6 +28,26 @@ async function request(path, options = {}) {
     },
   });
 
+  // On 401, attempt a single silent token refresh then retry the request once
+  if (response.status === 401 && !_isRetry && _tokenRefresher) {
+    try {
+      const freshToken = await _tokenRefresher();
+      if (freshToken) {
+        // Replace the Authorization header with the new token and retry
+        const retryOptions = {
+          ...options,
+          headers: {
+            ...(options.headers || {}),
+            Authorization: `Bearer ${freshToken}`,
+          },
+        };
+        return request(path, retryOptions, true /* isRetry */);
+      }
+    } catch {
+      // Refresh failed — fall through to throw the original 401
+    }
+  }
+
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
@@ -22,6 +57,7 @@ async function request(path, options = {}) {
   return data;
 }
 
+// ── Auth ──────────────────────────────────────────────────────────────────────
 export function signup(payload) {
   return request("/api/auth/signup", {
     method: "POST",
@@ -51,6 +87,7 @@ export function saveCandidateDetails(payload, token) {
   });
 }
 
+// ── Candidate (dashboard edit) ────────────────────────────────────────────────
 export function updateCandidateDetails(payload, token) {
   return request("/api/admin/candidate-details", {
     method: "PATCH",
@@ -59,6 +96,7 @@ export function updateCandidateDetails(payload, token) {
   });
 }
 
+// ── Admin — candidates ────────────────────────────────────────────────────────
 export function getCandidates() {
   return request("/api/admin/candidates");
 }
@@ -97,6 +135,7 @@ export function deleteCandidate(id) {
   });
 }
 
+// ── Admin — global lock ───────────────────────────────────────────────────────
 export function getGlobalLock() {
   return request("/api/admin/global-lock");
 }
@@ -108,17 +147,15 @@ export function setGlobalLock(locked) {
   });
 }
 
+// ── Dashboard ─────────────────────────────────────────────────────────────────
 export async function getDashboard(signal) {
   const response = await fetch(`${apiBaseUrl}/dashboard`, { signal });
   const text = await response.text();
-
-  if (!response.ok) {
-    throw new Error(text || "Failed to load dashboard.");
-  }
-
+  if (!response.ok) throw new Error(text || "Failed to load dashboard.");
   return text || "Dashboard";
 }
 
+// ── Attendance ────────────────────────────────────────────────────────────────
 export function markAttendance(qrToken) {
   return request("/api/admin/attendance", {
     method: "POST",
@@ -130,7 +167,7 @@ export function getAttendanceStats() {
   return request("/api/admin/attendance/stats");
 }
 
-// Slot distribution — admin only
+// ── Slot distribution ─────────────────────────────────────────────────────────
 export function distributeSlots() {
   return request("/api/admin/slots/distribute", { method: "POST" });
 }
@@ -143,7 +180,7 @@ export function clearAllSlots() {
   return request("/api/admin/slots", { method: "DELETE" });
 }
 
-// Slot schedules — admin only
+// ── Slot schedules ────────────────────────────────────────────────────────────
 export function getSlotSchedules() {
   return request("/api/admin/slots/schedules");
 }
